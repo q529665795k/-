@@ -1,4 +1,4 @@
-addEventListener('fetch', e => e.respondWith(main(e.request)))
+ addEventListener('fetch', e => e.respondWith(main(e.request)))
 
 async function main(r) {
   let u = new URL(r.url)
