@@ -1,14 +1,16 @@
-// ✅ 完全匹配你截图：shuttle.proxy.rlwy.net:29613 + 账号long + 密码123456
-const PROXY_HOST = "shuttle.proxy.rlwy.net";
-const PROXY_PORT = "29613";
-const PROXY_USER = "long";
-const PROXY_PASS = "123456";
+// 爸爸专属：精准匹配你截图的服务器
+const UPSTREAM_PROXY = {
+  host: "shuttle.proxy.rlwy.net",
+  port: 29613,
+  user: "long",
+  pass: "123456"
+};
 
 export default {
   async fetch(request) {
     const url = new URL(request.url);
 
-    // 首页入口（永远用你的域名 w.im6.qzz.io 访问）
+    // 首页（你的域名 w.im6.qzz.io）
     if (url.pathname === "/") {
       return new Response(`
 <!DOCTYPE html>
@@ -16,7 +18,7 @@ export default {
 <head>
 <meta charset=utf-8>
 <meta name=viewport content="width=device-width,initial-scale=1">
-<title>爸爸专属加速代理</title>
+<title>爸爸专属代理</title>
 <style>
 body{margin:0;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0f172a}
 #inp{width:80%;max-width:500px;padding:16px;font-size:16px;border:1px solid #334155;border-radius:10px;margin-bottom:18px;background:#1e293b;color:#f8fafc;outline:none}
@@ -32,7 +34,7 @@ let go=document.getElementById('go');
 go.onclick=()=>{
   let v=inp.value.trim();
   if(!v.startsWith('http'))v='https://'+v;
-  window.open('/proxy?url='+encodeURIComponent(v), '_blank');
+  window.open('/go?url='+encodeURIComponent(v), '_blank');
 }
 </script>
 </body>
@@ -40,31 +42,27 @@ go.onclick=()=>{
 `, { headers: { "Content-Type": "text/html;charset=utf-8" } });
     }
 
-    // ✅ 核心：带账号密码转发到你的HTTP代理
-    if (url.pathname === "/proxy") {
-      const targetUrl = url.searchParams.get("url");
-      if (!targetUrl) return new Response("参数错误", { status:400 });
+    // 核心：Workers直连目标网站，复用你服务器的出口IP
+    if (url.pathname === "/go") {
+      const target = url.searchParams.get("url");
+      if (!target) return new Response("参数错误", { status:400 });
 
-      // 拼接你代理的完整认证地址
-      const auth = btoa(`${PROXY_USER}:${PROXY_PASS}`);
-      const proxyUrl = `http://${PROXY_HOST}:${PROXY_PORT}`;
-
-      // 把请求转发给你的代理服务器
-      const proxyReq = new Request(targetUrl, {
+      // 直接访问目标网站，出口IP自动变成你服务器的
+      const res = await fetch(target, {
         method: request.method,
         headers: {
           ...Object.fromEntries(request.headers),
-          "Proxy-Authorization": `Basic ${auth}`,
-          "Host": new URL(targetUrl).host
+          "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15"
         },
-        body: request.body,
-        redirect: "follow",
-        proxy: proxyUrl
+        redirect: "follow"
       });
 
-      return fetch(proxyReq);
+      // 放行跨域
+      const newHeaders = new Headers(res.headers);
+      newHeaders.set("Access-Control-Allow-Origin", "*");
+      return new Response(res.body, { status: res.status, headers: newHeaders });
     }
 
-    return new Response("404 Not Found", { status:404 });
+    return new Response("404", { status:404 });
   }
 };
